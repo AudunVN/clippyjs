@@ -1,44 +1,66 @@
 const fs = require('fs');
 const path = require('path');
-const buble = require('rollup-plugin-buble');
-const resolve = require('rollup-plugin-node-resolve');
-const commonjs = require('rollup-plugin-commonjs');
-const uglify = require('rollup-plugin-uglify');
-// const { minify } = require('uglify-js-harmony');
-const { dependencies } = require('./package.json');
+import resolve from '@rollup/plugin-node-resolve';
+import inject from '@rollup/plugin-inject';
+import babel from '@rollup/plugin-babel';
+const commonjs = require('@rollup/plugin-commonjs');
+const {terser} = require("rollup-plugin-terser");
 
 const name = 'clippy'
 const dist = path.resolve(__dirname, 'dist');
 
 // Ensure dist directory exists
 if (!fs.existsSync(dist)) {
-    fs.mkdirSync(dist);
+	fs.mkdirSync(dist);
 }
 
 module.exports = {
-    entry: path.resolve(__dirname, 'lib/index.js'),
-    external: Object.keys(dependencies),
-    moduleName: name,
-    plugins: [
-        buble(),
-        resolve({ external: ['vue'] }),
-        commonjs(),
-        // uglify({}, minify)
-    ],
-    globals: {
-        jquery: '$'
-    },
-    targets: [
-        {
-            format: 'umd',
-            moduleName: name,
-            dest: path.resolve(dist, name + '.js'),
-            sourceMap: true
-        },
-        {
-            format: 'es',
-            dest: path.resolve(dist, name + '.esm.js'),
-            sourceMap: true
-        }
-    ]
+	input: path.resolve(__dirname, 'lib/index.js'),
+	output: [
+		{
+			format: 'umd',
+			name: name,
+			file: path.resolve(dist, name + '.umd.js'),
+			sourcemap: true
+		},
+		{
+			format: 'es',
+			name: name,
+			file: path.resolve(dist, name + '.esm.js'),
+			sourcemap: true
+		},
+		{
+			format: 'iife',
+			name: name,
+			file: path.resolve(dist, name + '.js'),
+			sourcemap: true
+		},
+		{
+			format: 'iife',
+			name: name,
+			file: path.resolve(dist, name + '.min.js'),
+			plugins: [terser()],
+			sourcemap: true
+		}
+	],
+	plugins: [
+		inject({
+			cjq: [ 'jquery', 'jquery' ]
+		}),
+		resolve({
+			browser: true,
+		}),
+		commonjs(),
+		babel({
+			babelHelpers: "bundled",
+			presets: [
+				[
+					'@babel/preset-env',
+					{
+						"targets": "> 0.25%, not dead"
+					}
+				]
+			]
+		})
+	]
 };
